@@ -57,10 +57,12 @@
   :group 'comicscript)
 
 (defcustom comicscript-left-margin 0
+  "margin"
   :type 'integer
   :group 'comicscript)
 
 (defcustom comicscript-right-margin 50
+  "margin"
   :type 'integer
   :group 'comicscript)
 
