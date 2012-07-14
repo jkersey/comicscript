@@ -32,6 +32,8 @@
 
 ;;; Code:
 
+(setq debug-on-error 1)
+
 (defconst comicscript-version "0.1.0"
   "Current Emacs Comicscript Mode version number.")
 (defconst screenplay-author-name  "V. L. Simpson")
@@ -76,6 +78,10 @@
   :type 'integer
   :group 'comicscript)
 
+(defvar comicscript-dialog-left-margin 10)
+(defvar comicscript-dialog-right-margin 40)
+
+
 ;; This is pretty lame
 (setq comicscript-page-spelled '("ONE" "TWO" "THREE" "FOUR"
 	"FIVE" "SIX" "SEVEN" "EIGHT" "NINE" "TEN"
@@ -88,13 +94,15 @@
 (defvar scrn-scene-hist ()
   "History list for scene headings.")
 
+
+
 (defvar scrn-dialog-name-hist ()
   "History list for dialog block name attribute.")
 
 ;; Some syntax highlighting
 (setq myKeywords
  '(("Panel [0-9]*\." . font-lock-function-name-face)
-   ("PAGE .*" . font-lock-constant-face)
+;;   ("PAGE .*" . font-lock-constant-face)
    ("^.*:" . font-lock-comment-face)
   )
 )
@@ -103,6 +111,8 @@
   (setq font-lock-defaults '(myKeywords))
   "Major mode for editing comicscripts.
 \\{comicscript-mode-map}"
+  (define-key comicscript-mode-map "C-x o" 'reload-comicscript)
+  (define-key comicscript-mode-map ":" 'comicscript-dialog)
   (define-key comicscript-mode-map "\t\r" 'comicscript-page)
   (define-key comicscript-mode-map "\t\t\r" 'comicscript-panel-block)
   (define-key comicscript-mode-map "\t\t\t\r" 'comicscript-dialog-block)
@@ -114,16 +124,19 @@
   (make-local-variable 'comicscript-page-number)
   )
 
-(defun get-next-page ()
+(defun get-substring(start end)
+  "get the clean substring" 
+  (interactive)
   (save-excursion
-  (re-search-backward "^PAGE \\([0-9]*\\)" )
-  (setq start (+ (point) 5))
-  (re-search-forward " \(")
-  (setq end (- (point) 1))
-  (setq page (buffer-substring-no-properties start end))
-  (+ (string-to-number page) 1))
-)
+    (+ (string-to-number (buffer-substring-no-properties (+ start 5) ( - end 2))
+			 ) 1)))
 
+(defun get-next-page ()
+"get the next page number"
+  (save-excursion
+    (setq start (re-search-backward "^PAGE \\([0-9]*\\)" nil t))
+    (setq end (re-search-forward " \(" nil t))
+    (if start (get-substring start end) 1)))
 
 (defun scrn-margins ()
   "Set left-margin and fill-column for page and action blocks."
@@ -154,32 +167,30 @@ Returns scene heading in upper-case format."
         (t
          (comicscript-read-page))))
 
+(defun reload-comicscript ()
+  "reload"
+  (interactive)
+  (require 'comicscript)
+  (comicscript-mode)
+)
 
-(defun comicscript-page (scene)
+
+(defun comicscript-page ()
   "Insert a page heading.
 To edit an existing page heading, put the cursor on that line
 and call this function with a prefix-arg, i.e, C-u TAB-RET."
-  (interactive (list (scrn-edit-page)))
+  (interactive)
   (setq next-page (get-next-page))
-  (cond ((not scene)
-         nil)
-        (t
-         (newline 2)
-         (scrn-margins)
-         (indent-to-left-margin)
-	 (insert "PAGE ")
-	 (insert (number-to-string next-page)))
-	 (insert " (")
-	 (insert scene)
-	 (insert " panels) ")
-	 (setq comicscript-panel-number 1)
-	 (setq comicscript-page-number (+ comicscript-page-number 1))
-	 ))
+  (newline 2)
+  (scrn-margins)
+  (indent-to-left-margin)
+  (insert "PAGE ")
+  (insert (number-to-string next-page))
+  (insert " (0 panels) ")
+)
 
 (defun comicscript-panel-block ()
-  "Edit a description block.
-With a prefix argument, just set margins and fill-column for an
-action block element."
+  "A panel"
   ;; Search backward for previous id, search forward to see if
   ;; the ids need to be reset
   ;; update number of panels for page
@@ -198,6 +209,17 @@ action block element."
 	 (setq comicscript-panel-number (+ comicscript-panel-number 1))
 	 )))
 
+(transient-mark-mode 1)
+
+(defun comicscript-dialog ()
+  "back up, capitalize, and return"
+  (interactive)
+  (save-excursion
+    (upcase-region (point) (re-search-backward "^.")))
+    (insert ":")
+    (newline 1)
+)
+
 (defun comicscript-dialog-char-name ()
 "Return uppercase dialog block character tag."
   (let ((char-name
@@ -211,8 +233,6 @@ action block element."
                                  nil))))
     (upcase char-name)))
 
-(defvar comicscript-dialog-left-margin 10)
-(defvar comicscript-dialog-right-margin 40)
 
 (defun scrn-dialog-margins ()
   (setq left-margin comicscript-dialog-left-margin)
