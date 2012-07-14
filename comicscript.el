@@ -103,7 +103,6 @@
   (setq font-lock-defaults '(myKeywords))
   "Major mode for editing comicscripts.
 \\{comicscript-mode-map}"
-;; FIXME: Try some kind of command rotation scheme with just tab and enter.
   (define-key comicscript-mode-map "\t\r" 'comicscript-page)
   (define-key comicscript-mode-map "\t\t\r" 'comicscript-panel-block)
   (define-key comicscript-mode-map "\t\t\t\r" 'comicscript-dialog-block)
@@ -113,8 +112,18 @@
   (make-local-variable 'scrn-dialog-name-hist)
   (make-local-variable 'comicscript-panel-number)
   (make-local-variable 'comicscript-page-number)
-
   )
+
+(defun get-next-page ()
+  (save-excursion
+  (re-search-backward "^PAGE \\([0-9]*\\)" )
+  (setq start (+ (point) 5))
+  (re-search-forward " \(")
+  (setq end (- (point) 1))
+  (setq page (buffer-substring-no-properties start end))
+  (+ (string-to-number page) 1))
+)
+
 
 (defun scrn-margins ()
   "Set left-margin and fill-column for page and action blocks."
@@ -151,7 +160,7 @@ Returns scene heading in upper-case format."
 To edit an existing page heading, put the cursor on that line
 and call this function with a prefix-arg, i.e, C-u TAB-RET."
   (interactive (list (scrn-edit-page)))
-  ;;  (interactive (list (comicscript-read-page)))
+  (setq next-page (get-next-page))
   (cond ((not scene)
          nil)
         (t
@@ -159,13 +168,13 @@ and call this function with a prefix-arg, i.e, C-u TAB-RET."
          (scrn-margins)
          (indent-to-left-margin)
 	 (insert "PAGE ")
-	 (insert (nth comicscript-page-number comicscript-page-spelled))
+	 (insert (number-to-string next-page)))
 	 (insert " (")
 	 (insert scene)
 	 (insert " panels) ")
 	 (setq comicscript-panel-number 1)
 	 (setq comicscript-page-number (+ comicscript-page-number 1))
-	 )))
+	 ))
 
 (defun comicscript-panel-block ()
   "Edit a description block.
