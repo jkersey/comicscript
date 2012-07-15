@@ -58,29 +58,12 @@
   :type 'hook
   :group 'comicscript)
 
-(defcustom comicscript-left-margin 0
-  "margin"
-  :type 'integer
-  :group 'comicscript)
-
-(defcustom comicscript-right-margin 50
-  "margin"
-  :type 'integer
-  :group 'comicscript)
-
-(defcustom comicscript-panel-number 1
-  "Current panel number"
-  :type 'integer
-  :group 'comicscript)
-
-(defcustom comicscript-page-number 0
-  "Current page index"
-  :type 'integer
-  :group 'comicscript)
-
+(defcustom comicscript-left-margin 0 "margin" :type 'integer :group 'comicscript)
+(defcustom comicscript-right-margin 50 "margin" :type 'integer :group 'comicscript)
 (defvar comicscript-dialog-left-margin 10)
 (defvar comicscript-dialog-right-margin 40)
-
+(defvar comicscript-page-id 0)
+(defvar comicscript-pages ())
 
 ;; This is pretty lame
 (setq comicscript-page-spelled '("ONE" "TWO" "THREE" "FOUR"
@@ -91,32 +74,25 @@
 	"TWENTYTHREE" "TWENTYFOUR"))
 
 ;; I'll give internal variables and defuns 'scrn' prefix.
-(defvar scrn-scene-hist ()
-  "History list for scene headings.")
-
-
-
-(defvar scrn-dialog-name-hist ()
-  "History list for dialog block name attribute.")
+(defvar scrn-scene-hist () "History list for scene headings.")
+(defvar scrn-dialog-name-hist () "History list for dialog block name attribute.")
 
 ;; Some syntax highlighting
 (setq myKeywords
  '(("Panel [0-9]*\." . font-lock-function-name-face)
-;;   ("PAGE .*" . font-lock-constant-face)
+   ("PAGE .*" . font-lock-constant-face)
    ("^.*:" . font-lock-comment-face)
   )
 )
 
 (define-derived-mode comicscript-mode fundamental-mode "Comicscript"
+  "Major mode for editing comicscripts."
   (setq font-lock-defaults '(myKeywords))
-  "Major mode for editing comicscripts.
-\\{comicscript-mode-map}"
-  (define-key comicscript-mode-map "C-x o" 'reload-comicscript)
+  (define-key comicscript-mode-map "\C-x\o" 'comicscript-do-repaginate)
   (define-key comicscript-mode-map ":" 'comicscript-dialog)
-  (define-key comicscript-mode-map "\t\r" 'comicscript-page)
-  (define-key comicscript-mode-map "\t\t\r" 'comicscript-panel-block)
+  (define-key comicscript-mode-map "\t\r" 'comicscript-add-new-page)
+  (define-key comicscript-mode-map "\t\t\r" 'comicscript-add-new-panel)
   (define-key comicscript-mode-map "\t\t\t\r" 'comicscript-dialog-block)
-  (make-local-variable 'scrn-scene-hist)
   (make-local-variable 'comicscript-right-margin)
   (make-local-variable 'comicscript-left-margin)
   (make-local-variable 'scrn-dialog-name-hist)
@@ -124,41 +100,97 @@
   (make-local-variable 'comicscript-page-number)
   )
 
-(defun get-substring(start end)
-  "get the clean substring" 
-  (interactive)
-  (save-excursion
-    (+ (string-to-number (buffer-substring-no-properties (+ start 5) ( - end 2))
-			 ) 1)))
+(defun get-panel-id-substring(start end)
+"get the substring"
+(interactive)
+(save-excursion
+  (+ (string-to-number (buffer-substring-no-properties (+ start 6) ( - end 1))
+		       ) 1 )))
 
-(defun get-next-page ()
-"get the next page number"
-  (save-excursion
-    (setq start (re-search-backward "^PAGE \\([0-9]*\\)" nil t))
-    (setq end (re-search-forward " \(" nil t))
-    (if start (get-substring start end) 1)))
+(defun update-panel-count (back-count)
+  "fix panel count"
+  nil
+)
+
+(defun comicscript-repanelate (start end)
+"list based repanelation"
+(goto-char start)
+(save-excursion
+  (while (< (+ 20 (point)) end)
+    (setq panel-point (re-search-forward "^Panel \\([0-9]*\\)" nil t))
+    (if (not panel-point) (setq panel-point (+ end 5)))
+    (if (< panel-point end)
+	(comicscript-repanelate-inner)
+      (insert "-")
+      )
+    )
+  )
+)
+
+(defun comicscript-repanelate-inner () 
+  (interactive)
+  (setq start (- (point) 2))
+  (setq reg-end (re-search-forward "\\." nil t))
+  (delete-region start reg-end)
+  (setq comicscript-panel-id (+ comicscript-panel-id 1))
+  (insert " ")
+  (insert (number-to-string comicscript-panel-id))
+  (insert ".")
+
+)
+
+(defun print-elements-of-list (list)
+  "Print each element of LIST on a line of its own."
+  (while list
+    (insert (number-to-string (car list)))
+    (insert " : ")
+    (setq list (cdr list)))
+)
+
+(defun comicscript-do-repaginate() 
+"run repaginate"
+(interactive)
+ (save-excursion
+   (setq comicscript-page-id -1)
+   (goto-char (point-min))
+   (setq start-point (re-search-forward "^PAGE " nil t))
+   (comicscript-repaginate start-point)
+   (setq comicscript-pages (nreverse comicscript-pages))
+   )
+ (save-excursion
+   (while comicscript-pages
+     (setq start (car comicscript-pages))
+     (setq comicscript-pages (cdr comicscript-pages))
+     (setq end (car comicscript-pages))
+     (setq comicscript-panel-id 0)
+     (if end
+	 (comicscript-repanelate start end)
+       )
+     )
+   )
+)
+ 
+    
+(defun comicscript-repaginate (keep-going)
+  (interactive)
+  (setq comicscript-pages ())
+  (while keep-going 
+    (setq comicscript-pages 
+	  (cons keep-going comicscript-pages))
+    (delete-region (point) (line-end-position))
+    (setq comicscript-page-id (+ comicscript-page-id 1))
+    (insert (nth comicscript-page-id comicscript-page-spelled))
+    (setq keep-going (re-search-forward "^PAGE " nil t))
+    )
+    (setq comicscript-pages
+	  (cons (point-max) comicscript-pages)
+    
+))
 
 (defun scrn-margins ()
   "Set left-margin and fill-column for page and action blocks."
   (setq left-margin comicscript-left-margin)
   (setq fill-column comicscript-right-margin))
-
-(defun comicscript-reset-script ()
-  (setq comicscript-page-number 0))
-
-(defun comicscript-read-page ()
-  "Get scene heading.
-Returns scene heading in upper-case format."
-  (let ((scene-heading 
-         (let ((prompt "Enter scene heading: "))
-           (read-from-minibuffer prompt 
-                                 nil           ;initial-contents
-                                 nil           ;keymap
-                                 nil           ;read
-                                 'scrn-scene-hist   ;hist
-                                 nil           ;default
-                                 nil))))       ;inherit-input-method
-    scene-heading))
 
 (defun scrn-edit-page ()
   (cond (current-prefix-arg
@@ -167,47 +199,37 @@ Returns scene heading in upper-case format."
         (t
          (comicscript-read-page))))
 
-(defun reload-comicscript ()
-  "reload"
+(defun comicscript-add-new-page ()
+  "Insert a page page"
   (interactive)
-  (require 'comicscript)
-  (comicscript-mode)
-)
-
-
-(defun comicscript-page ()
-  "Insert a page heading.
-To edit an existing page heading, put the cursor on that line
-and call this function with a prefix-arg, i.e, C-u TAB-RET."
-  (interactive)
-  (setq next-page (get-next-page))
   (newline 2)
   (scrn-margins)
   (indent-to-left-margin)
   (insert "PAGE ")
-  (insert (number-to-string next-page))
-  (insert " (0 panels) ")
+  (newline 2)
+  (comicscript-do-repaginate)
 )
 
 (defun comicscript-panel-block ()
-  "A panel"
+  "Insert a panel"
   ;; Search backward for previous id, search forward to see if
   ;; the ids need to be reset
   ;; update number of panels for page
   (interactive)
-  (cond (current-prefix-arg
-         (scrn-margins))
-        (t
-         (newline 2)
-         (scrn-margins)
-	 (insert "Panel ")
-	 ;;(setq next-page (re-search-forward "Panel \\([0-9]*\\)")) ;;[^/r]*PAGE"))
-	 (insert (prin1-to-string comicscript-panel-number))
-	 (insert ".  ")
-         (use-hard-newlines -1)
-         (indent-to-left-margin)
-	 (setq comicscript-panel-number (+ comicscript-panel-number 1))
-	 )))
+  (save-excursion
+    (setq panel-point (point))
+    (setq back-boundary (re-search-backward "^PAGE \\([0-9]*\\)" nil t))
+    (setq next-panel (get-next-panel back-boundary))
+    )
+  (if back-boundary (update-panel-count back-boundary)
+    (
+    (insert "Page 1 (1 panels)")
+    (newline 2)
+    ))
+  (insert "Panel ")
+  (insert (number-to-string next-panel))
+  (insert ".  ")
+)
 
 (transient-mark-mode 1)
 
@@ -220,20 +242,6 @@ and call this function with a prefix-arg, i.e, C-u TAB-RET."
     (newline 1)
 )
 
-(defun comicscript-dialog-char-name ()
-"Return uppercase dialog block character tag."
-  (let ((char-name
-         (let ((prompt "Enter character name: "))
-           (read-from-minibuffer prompt
-                                 nil
-                                 nil
-                                 nil
-                                 'scrn-dialog-name-hist
-                                 nil
-                                 nil))))
-    (upcase char-name)))
-
-
 (defun scrn-dialog-margins ()
   (setq left-margin comicscript-dialog-left-margin)
   (setq fill-column comicscript-dialog-right-margin))
@@ -245,23 +253,6 @@ and call this function with a prefix-arg, i.e, C-u TAB-RET."
          nil)
         (t
          (comicscript-dialog-char-name))))
-
-(defun comicscript-dialog-block (name)
-  "Edit dialog block."
-  (interactive (list (scrn-edit-dialog)))
-  (cond ((not name)
-         nil)
-        (t
-         (use-hard-newlines 1 t)
-         (newline 2)
-         (setq left-margin 0)
-         (indent-to-left-margin)
-         (insert name)
-	 (insert ":")
-         (newline 1)
-         (setq left-margin 00)
-         (setq fill-column 40)
-         (indent-to-left-margin))))
 
 (defun comicscript-version ()
   "Display current program version in echo area."
