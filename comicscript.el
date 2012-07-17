@@ -5,7 +5,7 @@
 
 ;; This file is based on V. L. Simpson's screenplay major mode
 
-;; $Id: screenplay.el,v 0.1.0 2012/07/09 03:27:42 jmk Exp $
+;; $Id: comicscript.el,v 0.1.0 2012/07/09 03:27:42 jmk Exp $
 
 ;; Copyright (C) 2000, 2001, 2002, 2003, 2004  Vance L. Simpson
 
@@ -64,6 +64,7 @@
 (defvar comicscript-dialog-right-margin 40)
 (defvar comicscript-page-id 0)
 (defvar comicscript-pages ())
+(defvar comicscript-panel-count ())
 
 ;; This is pretty lame
 (setq comicscript-page-spelled '("ONE" "TWO" "THREE" "FOUR"
@@ -92,7 +93,6 @@
   (define-key comicscript-mode-map ":" 'comicscript-dialog)
   (define-key comicscript-mode-map "\t\r" 'comicscript-add-new-page)
   (define-key comicscript-mode-map "\t\t\r" 'comicscript-add-new-panel)
-  (define-key comicscript-mode-map "\t\t\t\r" 'comicscript-dialog-block)
   (make-local-variable 'comicscript-right-margin)
   (make-local-variable 'comicscript-left-margin)
   (make-local-variable 'scrn-dialog-name-hist)
@@ -100,21 +100,26 @@
   (make-local-variable 'comicscript-page-number)
   )
 
-(defun get-panel-id-substring(start end)
-"get the substring"
-(interactive)
-(save-excursion
-  (+ (string-to-number (buffer-substring-no-properties (+ start 6) ( - end 1))
-		       ) 1 )))
 
-(defun update-panel-count (back-count)
+(defun comicscript-update-panel-count ()
   "fix panel count"
-  nil
+  (save-excursion
+    (goto-char 0)
+  (while comicscript-panel-count
+    (re-search-forward "^PAGE \\([0-9]*\\)" nil t)
+    (goto-char (line-end-position))
+    (insert " (")
+    (insert (number-to-string (car comicscript-panel-count)))
+    (insert " pages)")
+    (setq comicscript-panel-count (cdr comicscript-panel-count))
+    )
+  )
 )
 
 (defun comicscript-repanelate (start end)
 "list based repanelation"
 (goto-char start)
+(setq page-panel-count 0)
 (save-excursion
   (while (< (+ 20 (point)) end)
     (setq panel-point (re-search-forward "^Panel \\([0-9]*\\)" nil t))
@@ -124,11 +129,13 @@
       (insert "-")
       )
     )
+  (setq comicscript-panel-count (cons page-panel-count comicscript-panel-count))
   )
 )
 
 (defun comicscript-repanelate-inner () 
   (interactive)
+  (setq page-panel-count (+ page-panel-count 1))
   (setq start (- (point) 2))
   (setq reg-end (re-search-forward "\\." nil t))
   (delete-region start reg-end)
@@ -136,7 +143,6 @@
   (insert " ")
   (insert (number-to-string comicscript-panel-id))
   (insert ".")
-
 )
 
 (defun print-elements-of-list (list)
@@ -156,6 +162,7 @@
    (setq start-point (re-search-forward "^PAGE " nil t))
    (comicscript-repaginate start-point)
    (setq comicscript-pages (nreverse comicscript-pages))
+   (setq comicscript-pages-backup comicscript-pages)
    )
  (save-excursion
    (while comicscript-pages
@@ -167,6 +174,11 @@
 	 (comicscript-repanelate start end)
        )
      )
+   )
+(setq comicscript-panel-count (nreverse comicscript-panel-count))
+(setq comicscript-pages comicscript-pages-backup)
+ (save-excursion
+   (comicscript-update-panel-count)
    )
 )
  
