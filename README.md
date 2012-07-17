@@ -5,9 +5,15 @@ An Emacs major mode for writing formatted comic book scripts, based on Vance L. 
 
 Instructions:
 
-TAB-ENTER:  Start a new page
-TAB-TAB-ENTER:  Start a new panel
-TAB-TAB-TAB-ENTER: Start a new dialog
+Start a new page: TAB-ENTER
+Start a new panel: TAB-TAB-ENTER:
 
-The mode remembers the last page/panel number that was entered, I'm working on having it check up and down to see if it needs to repaginate (or repanelate?) the blocks.
+new dialog:  
+Working on this, when you type a ':' the text before it is uppercased and the cursor drops down to the next line
+
+Code is in place to renumber the page and panels, will be automatic but right now you have to use Ctrl-X o
+
+WARNING: Anything on the same line as 'PAGE XXX' is destroyed by the formatter.  'Page' lines are safe and are not destroyed.
+
+
 
