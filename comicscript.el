@@ -109,8 +109,8 @@
     (re-search-forward "^PAGE \\([0-9]*\\)" nil t)
     (goto-char (line-end-position))
     (insert " (")
-    (insert (number-to-string (car comicscript-panel-count)))
-    (insert " pages)")
+    (insert (downcase (nth (car comicscript-panel-count) comicscript-page-spelled)))
+    (insert " panels)")
     (setq comicscript-panel-count (cdr comicscript-panel-count))
     )
   )
@@ -129,13 +129,13 @@
       (insert "-")
       )
     )
-  (setq comicscript-panel-count (cons page-panel-count comicscript-panel-count))
+  (setq comicscript-panel-count (cons comicscript-panel-id comicscript-panel-count))
   )
 )
 
 (defun comicscript-repanelate-inner () 
   (interactive)
-  (setq page-panel-count (+ page-panel-count 1))
+;;  (setq page-panel-count (+ page-panel-count 1))
   (setq start (- (point) 2))
   (setq reg-end (re-search-forward "\\." nil t))
   (delete-region start reg-end)
@@ -222,25 +222,17 @@
   (comicscript-do-repaginate)
 )
 
-(defun comicscript-panel-block ()
+(defun comicscript-add-new-panel ()
   "Insert a panel"
   ;; Search backward for previous id, search forward to see if
   ;; the ids need to be reset
   ;; update number of panels for page
   (interactive)
   (save-excursion
-    (setq panel-point (point))
-    (setq back-boundary (re-search-backward "^PAGE \\([0-9]*\\)" nil t))
-    (setq next-panel (get-next-panel back-boundary))
-    )
-  (if back-boundary (update-panel-count back-boundary)
-    (
-    (insert "Page 1 (1 panels)")
-    (newline 2)
-    ))
-  (insert "Panel ")
-  (insert (number-to-string next-panel))
-  (insert ".  ")
+    (newline)
+    (insert "Panel 0.  ")
+    (comicscript-do-repaginate))
+  (goto-char (line-end-position))
 )
 
 (transient-mark-mode 1)
