@@ -74,6 +74,10 @@
 	"EIGHTEEN" "NINETEEN" "TWENTY" "TWENTY-ONE" "TWENTY-TWO"
 	"TWENTYTHREE" "TWENTYFOUR"))
 
+(setq lc-comicscript-page-spelled '("zero" "one" "two" "three" "four"
+	"five" "six" "seven" "eight" "nine" "ten"
+	))
+
 ;; I'll give internal variables and defuns 'scrn' prefix.
 (defvar scrn-scene-hist () "History list for scene headings.")
 (defvar scrn-dialog-name-hist () "History list for dialog block name attribute.")
@@ -109,7 +113,9 @@
     (re-search-forward "^PAGE \\([0-9]*\\)" nil t)
     (goto-char (line-end-position))
     (insert " (")
-    (insert (downcase (nth (car comicscript-panel-count) comicscript-page-spelled)))
+;;    (insert comicscript-panel-count)
+;;    (insert (downcase (nth (car comicscript-panel-count) comicscript-page-spelled)))
+    (insert (downcase (nth (car comicscript-panel-count) lc-comicscript-page-spelled)))
     (insert " panels)")
     (setq comicscript-panel-count (cdr comicscript-panel-count))
     )
