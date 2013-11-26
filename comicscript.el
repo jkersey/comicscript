@@ -132,7 +132,7 @@
     (if (not panel-point) (setq panel-point (+ end 5)))
     (if (< panel-point end)
 	(comicscript-repanelate-inner)
-      (insert "-")
+;;      (insert "-")
       )
     )
   (setq comicscript-panel-count (cons comicscript-panel-id comicscript-panel-count))
