@@ -1,7 +1,7 @@
 ;;; comicscript.el --- A major mode for editing comic script files.
 
-;; Can help the comic book author format a script more or less in
-;; the way Dark Horse Comics likes to see them
+;; Can help the comic book author format scripts in more or less
+;; the way Dark Horse Comics expects them
 
 ;; This file is based on V. L. Simpson's screenplay major mode
 
@@ -32,16 +32,16 @@
 
 ;;; Code:
 
-(setq debug-on-error 1)
+;; (setq debug-on-error 1)
 
 (defconst comicscript-version "0.1.0"
   "Current Emacs Comicscript Mode version number.")
-(defconst screenplay-author-name  "V. L. Simpson")
-(defconst screenplay-author-email "vls@freeshell.org")
-(defconst screenplay-web-page     "http://www.nongnu.org/screenplay/")
-(defconst comicscript-web-page     "http://oversimplified.net/comicscript/")
+;;(defconst screenplay-author-name  "V. L. Simpson")
+;;(defconst screenplay-author-email "vls@freeshell.org")
+;;(defconst screenplay-web-page     "http://www.nongnu.org/screenplay/")
+;;(defconst comicscript-web-page     "http://jameskersey.com/comicscript/")
 (defconst vls-homepage "http://vls.freeshell.org")
-(defconst jmk-homepage "http://oversimplified.net")
+(defconst jmk-homepage "http://jameskersey.com")
 (defconst comicscript-bug-address
   "jim.kersey@gmail.com"
   "Bug reports for Comicscript Mode go here.")
@@ -93,7 +93,7 @@
 (define-derived-mode comicscript-mode fundamental-mode "Comicscript"
   "Major mode for editing comicscripts."
   (setq font-lock-defaults '(myKeywords))
-  (define-key comicscript-mode-map "\C-x\o" 'comicscript-do-repaginate)
+  ;;(define-key comicscript-mode-map "\C-x\o" 'comicscript-do-repaginate)
   (define-key comicscript-mode-map ":" 'comicscript-dialog)
   (define-key comicscript-mode-map "\t\r" 'comicscript-add-new-page)
   (define-key comicscript-mode-map "\t\t\r" 'comicscript-add-new-panel)
@@ -234,9 +234,9 @@
   ;; the ids need to be reset
   ;; update number of panels for page
   (interactive)
+  (newline)
+  (insert "Panel 0.  ")
   (save-excursion
-    (newline)
-    (insert "Panel 0.  ")
     (comicscript-do-repaginate))
   (goto-char (line-end-position))
 )
@@ -285,7 +285,7 @@ I'll try to fix it as soon as possible.
 Thanks,
 Jim
 Emacs Comicscript Mode
-http://oversimplified/comicscript/"))
+http://jameskersey.com/comicscript/"))
 
 (provide 'comicscript)
 ;;; comicscript.el ends here
